@@ -19,6 +19,7 @@ under the License.
 
 import pexpect
 import os
+import pytest
 import tempfile
 
 
@@ -27,8 +28,25 @@ class TestConsole(object):
     # the base command must pass -C because if colors are enabled pexpect gets garbled input and tests won't pass
     gremlinsh = "bash gremlin-console/bin/gremlin.sh -C "
 
+    # the isolated environment of the running test, see _isolate
+    env = None
+
+    @pytest.fixture(autouse=True)
+    def _isolate(self, console):
+        # run every test with its own home directory (history, preferences) and a reset ext/plugins.txt so that
+        # tests cannot affect each other or the developer's real console settings
+        TestConsole.env = console
+        yield
+        TestConsole.env = None
+
+    @staticmethod
+    def _spawn(command, **kwargs):
+        child = pexpect.spawn(command, env=TestConsole.env.env, **kwargs)
+        TestConsole.env._children.append(child)
+        return child
+
     def test_basic_console_operations(self):
-        child = pexpect.spawn(TestConsole.gremlinsh)
+        child = TestConsole._spawn(TestConsole.gremlinsh)
         TestConsole._expect_gremlin_header(child)
         TestConsole._send(child, "1-1")
         child.expect("==>0\r\n")
@@ -36,7 +54,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_just_dash_i(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "-i x.script")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "-i x.script")
         TestConsole._expect_gremlin_header(child)
         TestConsole._send(child, "x")
         child.expect("==>2\r\n")
@@ -44,7 +62,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_just_dash_dash_interactive(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "--interactive x.script")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "--interactive x.script")
         TestConsole._expect_gremlin_header(child)
         TestConsole._send(child, "x")
         child.expect("==>2\r\n")
@@ -52,7 +70,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_dash_i_with_args(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "-i y.script 1 2 3")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "-i y.script 1 2 3")
         TestConsole._expect_gremlin_header(child)
         TestConsole._send(child, "y")
         child.expect("==>6\r\n")
@@ -60,7 +78,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_dash_dash_interactive_with_args(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "--interactive y.script 1 2 3")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "--interactive y.script 1 2 3")
         TestConsole._expect_gremlin_header(child)
         TestConsole._send(child, "y")
         child.expect("==>6\r\n")
@@ -68,7 +86,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_dash_dash_interactive_with_args_and_equals(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "--interactive=\"y.script 1 2 3\"")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "--interactive=\"y.script 1 2 3\"")
         TestConsole._expect_gremlin_header(child)
         TestConsole._send(child, "y")
         child.expect("==>6\r\n")
@@ -76,7 +94,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_dash_i_multiple_scripts(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "-i y.script 1 2 3 -i x.script -i \"z.script x -i = --color -D\"")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "-i y.script 1 2 3 -i x.script -i \"z.script x -i = --color -D\"")
         TestConsole._expect_gremlin_header(child)
         TestConsole._send(child, "y")
         child.expect("==>6\r\n")
@@ -90,7 +108,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_dash_dash_interactive_multiple_scripts(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "--interactive y.script 1 2 3 --interactive x.script -i \"z.script x -i = --color -D\"")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "--interactive y.script 1 2 3 --interactive x.script -i \"z.script x -i = --color -D\"")
         TestConsole._expect_gremlin_header(child)
         TestConsole._send(child, "y")
         child.expect("==>6\r\n")
@@ -104,7 +122,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_mixed_interactive_long_short_opts_with_multiple_scripts(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "--interactive y.script 1 2 3 --interactive x.script -i \"z.script x -i = --color -D\"")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "--interactive y.script 1 2 3 --interactive x.script -i \"z.script x -i = --color -D\"")
         TestConsole._expect_gremlin_header(child)
         TestConsole._send(child, "y")
         child.expect("==>6\r\n")
@@ -118,65 +136,65 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_just_dash_e(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "-e x-printed.script")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "-e x-printed.script")
         child.expect("2\r\n")
         TestConsole._close(child)
 
     def test_just_dash_e_file_not_found(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "-e=x-printed.script")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "-e=x-printed.script")
         child.expect("Gremlin file not found at \\[=x-printed.script\\]\\.\r\n")
         child.expect(pexpect.EOF)
 
     def test_just_dash_dash_execute(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "--execute x-printed.script")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "--execute x-printed.script")
         child.expect("2\r\n")
         TestConsole._close(child)
 
     def test_dash_e_with_args(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "-e y-printed.script 1 2 3")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "-e y-printed.script 1 2 3")
         child.expect("6\r\n")
         TestConsole._close(child)
 
     def test_dash_dash_execute_with_args(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "--execute y-printed.script 1 2 3")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "--execute y-printed.script 1 2 3")
         child.expect("6\r\n")
         TestConsole._close(child)
 
     def test_dash_e_multiple_scripts(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "-e y-printed.script 1 2 3 -e x-printed.script -e \"z-printed.script x -e = --color -D\"")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "-e y-printed.script 1 2 3 -e x-printed.script -e \"z-printed.script x -e = --color -D\"")
         child.expect("6\r\n")
         child.expect("2\r\n")
         child.expect("argument=\\[x, -e, =, --color, -D\\]\r\n")
         TestConsole._close(child)
 
     def test_dash_dash_execute_multiple_scripts(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "--execute y-printed.script 1 2 3 --execute x-printed.script --execute \"z-printed.script x -e = --color -D\"")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "--execute y-printed.script 1 2 3 --execute x-printed.script --execute \"z-printed.script x -e = --color -D\"")
         child.expect("6\r\n")
         child.expect("2\r\n")
         child.expect("argument=\\[x, -e, =, --color, -D\\]\r\n")
         TestConsole._close(child)
 
     def test_mixed_execute_long_short_opts_with_multiple_scripts(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "--execute y-printed.script 1 2 3 -e x-printed.script --execute \"z-printed.script x -e = --color -D\"")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "--execute y-printed.script 1 2 3 -e x-printed.script --execute \"z-printed.script x -e = --color -D\"")
         child.expect("6\r\n")
         child.expect("2\r\n")
         child.expect("argument=\\[x, -e, =, --color, -D\\]\r\n")
         TestConsole._close(child)
 
     def test_no_mix_dash_i_and_dash_e(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "-i y.script 1 2 3 -i x.script -e \"z.script x -i --color -D\"")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "-i y.script 1 2 3 -i x.script -e \"z.script x -i --color -D\"")
         child.expect("-i and -e options are mutually exclusive - provide one or the other")
         child.expect(pexpect.EOF)
 
     def test_debug_logging(self):
-        child = pexpect.spawn(TestConsole.gremlinsh + "-l DEBUG --execute y-printed.script 1 2 3")
+        child = TestConsole._spawn(TestConsole.gremlinsh + "-l DEBUG --execute y-printed.script 1 2 3")
         child.expect("6\r\n")
         TestConsole._close(child)
 
     # dimensions=(50, 400): the wide terminal stops the pty from wrapping long
     # input lines, which would otherwise garble pexpect echo/output matching.
     def test_result_rendering_of_various_types(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
         TestConsole._setup_modern_graph(child)
 
@@ -208,7 +226,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_error_handling_runtime_exception(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
 
         # a runtime exception should be reported and then the interactive
@@ -222,7 +240,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_error_handling_missing_property(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
 
         child.sendline("undefinedVariable123")
@@ -234,7 +252,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_command_help(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
 
         child.sendline(":help")
@@ -246,7 +264,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_command_clear(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
 
         # :clear resets the buffer and returns to the prompt without error
@@ -260,7 +278,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_set_max_iteration_limits_results(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
 
         child.sendline(":set max-iteration 5")
@@ -275,7 +293,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_set_with_too_many_arguments_errors(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
 
         # :set accepts at most <name> [<value>]; three args is too many and is rejected
@@ -287,7 +305,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_plugin_list(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
 
         child.sendline(":plugin list")
@@ -297,7 +315,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_multiline_input(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
 
         # an incomplete expression continues on the next line; completing it
@@ -312,7 +330,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_error_handling_display_stack_trace_when_answering_yes(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
 
         # answering 'y' to the stack trace prompt drives the branch that prints the full trace
@@ -327,7 +345,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_error_handling_failure_step(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
         TestConsole._setup_modern_graph(child)
 
@@ -341,7 +359,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_result_rendering_path(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
         TestConsole._setup_modern_graph(child)
 
@@ -353,7 +371,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_result_rendering_edge(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
         TestConsole._setup_modern_graph(child)
 
@@ -365,7 +383,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_result_rendering_map_with_tokens(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
         TestConsole._setup_modern_graph(child)
 
@@ -378,7 +396,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_result_rendering_explain(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
         TestConsole._setup_modern_graph(child)
 
@@ -390,7 +408,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_result_rendering_object_array(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
 
         # an Object[] is iterated one element per line through the array branch of the result handler
@@ -403,7 +421,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_result_rendering_nested_lists(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
 
         # each element of the outer list is itself an Iterable, exercising the recursive colorizer
@@ -415,7 +433,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_result_rendering_large_number_and_boolean(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
 
         # large numbers are rendered through the Number branch
@@ -431,7 +449,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_plugin_use_activates_available_plugin(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
 
         # activating an already available plugin exercises the plugin activation closures without any network
@@ -442,7 +460,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_plugin_use_unknown_plugin(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
 
         child.sendline(":plugin use does.not.exist")
@@ -452,7 +470,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_uninstall_absent_module(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
 
         # uninstalling a module that is not present reports a not-found message (no network access)
@@ -463,7 +481,7 @@ class TestConsole(object):
         TestConsole._close(child)
 
     def test_uninstall_without_argument(self):
-        child = pexpect.spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
+        child = TestConsole._spawn(TestConsole.gremlinsh, dimensions=(50, 400), timeout=120)
         TestConsole._expect_gremlin_header(child)
 
         child.sendline(":uninstall")
@@ -476,7 +494,7 @@ class TestConsole(object):
         # -i executes the script and, when a line errors, reports it and leaves the console open
         script = TestConsole._write_error_script()
         try:
-            child = pexpect.spawn(TestConsole.gremlinsh + "-i " + script, dimensions=(50, 400), timeout=120)
+            child = TestConsole._spawn(TestConsole.gremlinsh + "-i " + script, dimensions=(50, 400), timeout=120)
             child.expect_exact("Error in " + script)
             TestConsole._expect_prompt(child)
             # the console remains usable after the script error
@@ -491,7 +509,7 @@ class TestConsole(object):
         # -e executes the script and, on error, reports it and closes the console
         script = TestConsole._write_error_script()
         try:
-            child = pexpect.spawn(TestConsole.gremlinsh + "-e " + script, dimensions=(50, 400), timeout=120)
+            child = TestConsole._spawn(TestConsole.gremlinsh + "-e " + script, dimensions=(50, 400), timeout=120)
             child.expect_exact("Error in " + script)
             child.expect(pexpect.EOF)
         finally:
@@ -509,10 +527,10 @@ class TestConsole(object):
     def _setup_modern_graph(child):
         # builds an in-memory TinkerGraph and an embedded traversal source, no server required
         child.sendline("graph = org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerFactory.createModern()")
-        child.expect_exact("==>tinkergraph[vertices:6 edges:6]")
+        child.expect_exact("==>tinkermemorygraph[vertices:6 edges:6]")
         TestConsole._expect_prompt(child)
         child.sendline("g = traversal().withEmbedded(graph)")
-        child.expect_exact("==>graphtraversalsource[tinkergraph[vertices:6 edges:6], standard]")
+        child.expect_exact("==>graphtraversalsource[tinkermemorygraph[vertices:6 edges:6], standard]")
         TestConsole._expect_prompt(child)
 
     @staticmethod

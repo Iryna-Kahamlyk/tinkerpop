@@ -52,6 +52,38 @@ class MediatorTest {
     }
 
     @Test
+    void shouldReadPluginStateInFileOrderIgnoringBlankLines() {
+        final File file = new File(ConsoleFs.PLUGIN_CONFIG_FILE)
+        final boolean createdDir = file.parentFile.mkdirs()
+        try {
+            file.text = "b.SecondPlugin\n\na.FirstPlugin\n\n"
+            assertEquals(["b.SecondPlugin", "a.FirstPlugin"], Mediator.readPluginState())
+        } finally {
+            file.delete()
+            if (createdDir) file.parentFile.delete()
+        }
+    }
+
+    @Test
+    void shouldWriteOnlyActivePluginsToPluginState() {
+        final File file = new File(ConsoleFs.PLUGIN_CONFIG_FILE)
+        final boolean createdDir = file.parentFile.mkdirs()
+        try {
+            // writePluginState only writes to a file that already exists and is writable
+            file.text = "old.Plugin\n"
+            final Mediator mediator = new Mediator(null)
+            mediator.availablePlugins.put("x.Active", new PluggedIn(null, null, null, true))
+            mediator.availablePlugins.put("x.Inactive", new PluggedIn(null, null, null, false))
+
+            assertTrue(mediator.writePluginState())
+            assertEquals(["x.Active"], Mediator.readPluginState())
+        } finally {
+            file.delete()
+            if (createdDir) file.parentFile.delete()
+        }
+    }
+
+    @Test
     void shouldNotWritePluginStateWhenConfigNotWritable() {
         // File.canWrite() is false when the config file does not exist, so writePluginState() reports false
         // and writes nothing
