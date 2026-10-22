@@ -224,6 +224,15 @@ public class GremlinGroovyScriptEngineLanguageBehaviorTest {
         assertEquals(Arrays.asList(1, null), ambiguousNullEngine.eval("g.inject(1, null).toList()", b));
     }
 
+    @Test
+    public void shouldCallInjectStepWithNullArgumentsWithoutTheAstTransformation() throws Exception {
+        assertEquals(Collections.singletonList(null), engine.eval("g.inject(null).toList()", modern));
+        assertEquals(Arrays.asList(null, null), engine.eval("g.inject(null, null).toList()", modern));
+        assertEquals(Arrays.asList(null, 1), engine.eval("g.inject(1).inject(null).toList()", modern));
+        assertEquals(Arrays.asList(null, 29), engine.eval("g.V(1).values('age').inject(null).toList()", modern));
+        assertEquals(Arrays.asList(1, 2), engine.eval("g.inject(1, 2).toList()", modern));
+    }
+
     // --- interrupts -------------------------------------------------------------------------------------------------
 
     @Test

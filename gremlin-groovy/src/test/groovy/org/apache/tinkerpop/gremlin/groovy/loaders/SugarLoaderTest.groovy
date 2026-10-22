@@ -179,6 +179,15 @@ class SugarLoaderTest {
     }
 
     @Test
+    public void shouldKeepStepLoaderAdditionsWhenSugarIsLoaded() {
+        def g = TinkerFactory.createModern().traversal()
+        GremlinLoader.load()
+        SugarLoader.load()
+        assertEquals(6L, g.withStrategies(org.apache.tinkerpop.gremlin.process.traversal.strategy.verification.ReadOnlyStrategy).V().count().next())
+        assertEquals([null], g.inject(null).toList())
+    }
+
+    @Test
     public void shouldAllowMapRangeSubscript() {
         SugarLoader.load()
         assertEquals([a: 1, b: 2], [a: 1, b: 2, c: 3][0..1])
