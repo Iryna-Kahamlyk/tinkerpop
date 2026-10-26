@@ -72,8 +72,8 @@ class MediatorTest {
             // writePluginState only writes to a file that already exists and is writable
             file.text = "old.Plugin\n"
             final Mediator mediator = new Mediator(null)
-            mediator.availablePlugins.put("x.Active", new PluggedIn(null, null, null, true))
-            mediator.availablePlugins.put("x.Inactive", new PluggedIn(null, null, null, false))
+            mediator.availablePlugins.put("x.Active", new PluggedIn(null, null, true))
+            mediator.availablePlugins.put("x.Inactive", new PluggedIn(null, null, false))
 
             assertTrue(mediator.writePluginState())
             assertEquals(["x.Active"], Mediator.readPluginState())

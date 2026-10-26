@@ -19,7 +19,6 @@
 
 package org.apache.tinkerpop.gremlin.console;
 
-import org.apache.groovy.groovysh.AnsiDetector
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 
@@ -30,8 +29,6 @@ public class Colorizer {
         // Install the system adapters, replaces System.out and System.err
         // Must be called before using IO(), because IO stores refs to System.out and System.err
         AnsiConsole.systemInstall()
-        // Register jline ansi detector
-        Ansi.setDetector(new AnsiDetector())
         Ansi.enabled = true
     }
 

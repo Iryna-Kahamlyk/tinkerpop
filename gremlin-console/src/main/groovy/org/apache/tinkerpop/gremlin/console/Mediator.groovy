@@ -49,6 +49,10 @@ class Mediator {
         console.showShellEvaluationOutput(show)
     }
 
+    def clear() {
+        console.clear()
+    }
+
     def writePluginState() {
         def file = new File(ConsoleFs.PLUGIN_CONFIG_FILE)
 
