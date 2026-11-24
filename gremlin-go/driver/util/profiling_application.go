@@ -167,7 +167,7 @@ func main() {
 
 func createClient(url string, poolSize int) (*gremlingo.Client, error) {
 	return gremlingo.NewClient(url, func(settings *gremlingo.ClientSettings) {
-		settings.MaximumConcurrentConnections = poolSize
+		settings.MaxConnections = poolSize
 		settings.LogVerbosity = gremlingo.Error
 	})
 }
