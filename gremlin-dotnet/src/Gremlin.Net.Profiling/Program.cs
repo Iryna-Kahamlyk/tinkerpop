@@ -76,7 +76,7 @@ async Task<(List<object> Measurements, List<long> Errors)> RunLatencyTest(Config
     var server = new GremlinServer(cfg.Host, cfg.Port);
     var connectionSettings = new ConnectionSettings
     {
-        MaxConnectionsPerServer = cfg.MaxConnectionsPerServer
+        MaxConnections = cfg.MaxConnectionsPerServer
     };
 
     using var client = new GremlinClient(server, connectionSettings: connectionSettings);
@@ -183,7 +183,7 @@ async Task<(List<object> Measurements, List<long> Errors)> RunThroughputTest(Con
     var server = new GremlinServer(cfg.Host, cfg.Port);
     var connectionSettings = new ConnectionSettings
     {
-        MaxConnectionsPerServer = cfg.MaxConnectionsPerServer
+        MaxConnections = cfg.MaxConnectionsPerServer
     };
 
     using var client = new GremlinClient(server, connectionSettings: connectionSettings);

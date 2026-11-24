@@ -63,7 +63,7 @@ class ProfilingApplication:
 
     def _create_client(self):
         return Client(self._url, "g",
-                      pool_size=self._pool_size,
+                      max_connections=self._pool_size,
                       max_workers=self._max_workers)
 
     def _choose_script(self):
@@ -204,7 +204,7 @@ def main():
         if args.exercise:
             print("--------------------------INITIALIZATION--------------------------")
             init_client = Client(url, "g",
-                                 pool_size=args.pool_size,
+                                 max_connections=args.pool_size,
                                  max_workers=args.max_workers)
             try:
                 init_client.submit("graph.clear()")
