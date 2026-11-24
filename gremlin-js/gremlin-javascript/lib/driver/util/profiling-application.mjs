@@ -120,8 +120,11 @@ function parseArgs(argv) {
   return args;
 }
 
+// One Client per pool slot, each limited to a single connection, so --pool-size is the number
+// of HTTP connections (as with the WebSocket driver in 3.7, and the other GLVs' pool settings).
+// Without maxConnections: 1, every Client's own dispatcher could open up to 128 connections.
 function createClients(url, poolSize) {
-  return Array.from({ length: poolSize }, () => new Client(url));
+  return Array.from({ length: poolSize }, () => new Client(url, { maxConnections: 1 }));
 }
 
 async function closeClients(clients) {
