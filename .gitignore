@@ -18,6 +18,7 @@ build_output.txt
 .factorypath
 .eggs
 gremlinpython.egg-info
+bench/tinkerpop_bench.egg-info
 _bsp/
 doc/out
 docs/*.asciidoc
