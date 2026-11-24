@@ -46,13 +46,13 @@ defaults:
 
 # GLV launcher paths, relative to the repo root (auto-discovered).
 # The java entry is a glob because the standalone dir is version-stamped
-# (3.7.x-SNAPSHOT); config.py resolves it to a concrete path at load time.
+# (3.7.x or 3.7.x-SNAPSHOT); config.py resolves it to a concrete path at load time.
 # Note: unlike 4.0, the 3.7 layout has no "gremlin-js/" parent — the
 # JavaScript launcher lives directly under gremlin-javascript/. The python
 # launcher gets "--transport ws" appended by the adapter (driven by
 # transport: ws above), matching the old common.sh run_python wrapper.
 launchers:
-  java: gremlin-driver/target/apache-tinkerpop-gremlin-driver-3.7.*-SNAPSHOT-standalone/bin/profile-driver.sh
+  java: gremlin-driver/target/apache-tinkerpop-gremlin-driver-3.7.*-standalone/bin/profile-driver.sh
   go: gremlin-go/profiling_application
   dotnet: gremlin-dotnet/src/main/bin/profile-driver.sh
   javascript: gremlin-javascript/src/main/bin/profile-driver.sh
